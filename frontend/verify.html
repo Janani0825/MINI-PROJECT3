@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verify my website - PhishGuard</title>
+  <link rel="stylesheet" href="vendor/bootstrap.min.css">
+  <link rel="stylesheet" href="vendor/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<main class="pb-5">
+  <div class="page-head">
+    <h1>Verify my website</h1>
+    <p>Own a genuine website (college, shop, clinic, portfolio...)? Ask the administrator to verify it. Once approved, anyone who scans your address sees that it is genuine, what it is used for and who owns it.</p>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="card h-100"><div class="card-body">
+        <div class="card-title-sm mb-3">Request verification</div>
+        <form id="f" novalidate>
+          <div class="mb-2"><label class="form-label">Website address</label><input id="domain" class="form-control" placeholder="example.ac.in" required></div>
+          <div class="mb-2"><label class="form-label">Organisation / website name</label><input id="org" class="form-control" maxlength="120" required></div>
+          <div class="mb-2"><label class="form-label">Category</label><select id="cat" class="form-select"></select></div>
+          <div class="mb-2"><label class="form-label">What is the website used for?</label><textarea id="purpose" class="form-control" rows="2" maxlength="400" placeholder="Example: Admissions and notices for students"></textarea></div>
+          <div class="mb-2"><label class="form-label">Contact e-mail <span class="text-muted small">(use an address on the same domain if you can)</span></label><input id="email" type="email" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label">Proof of ownership</label><textarea id="evidence" class="form-control" rows="3" maxlength="1500" placeholder="Who you are, your role, registration / licence number, official contact page, etc."></textarea></div>
+          <div id="msg" class="mb-2"></div>
+          <button class="btn btn-primary w-100" id="send"><i class="bi bi-send me-1"></i>Send to administrator</button>
+        </form>
+      </div></div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card mb-3"><div class="card-body">
+        <div class="card-title-sm mb-2">How it works</div>
+        <ol class="steps-list">
+          <li>Send the request with your proof.</li>
+          <li>You get a <b>verification code</b>. Put it in your website (a line in the page, or a file named <code>/.well-known/phishguard.txt</code>) so the admin can see the site is really yours.</li>
+          <li>The administrator checks the category, evidence, e-mail and automatic risk checks, then approves or rejects.</li>
+          <li>After approval, scans of your address show a <b>Verified website</b> card.</li>
+        </ol>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <div class="card-title-sm mb-2">My requests</div>
+        <div id="mine" class="small text-muted">Loading...</div>
+      </div></div>
+    </div>
+    <div class="col-12">
+      <div class="card"><div class="card-body">
+        <div class="card-title-sm mb-2"><i class="bi bi-patch-check-fill text-success me-1"></i>Verified websites</div>
+        <div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+          <thead><tr><th>Website</th><th>Name</th><th>Category</th><th>Used for</th><th>Owner</th><th>Verified</th></tr></thead>
+          <tbody id="dir"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody></table></div>
+      </div></div>
+    </div>
+  </div>
+</main>
+
+<script src="vendor/bootstrap.bundle.min.js"></script>
+<script src="js/config.js"></script><script src="js/mock.js"></script><script src="js/api.js"></script><script src="js/ui.js"></script>
+<script>
+  UI.guard("user"); UI.navbar("verify.html");
+  const $ = id => document.getElementById(id), { esc, fmtDate } = UI;
+  const ST = { pending: "warning", approved: "success", rejected: "danger", revoked: "secondary" };
+
+  function mineCard(s) {
+    return `<div class="border rounded-3 p-2 mb-2" style="border-color:var(--line)!important">
+      <div class="d-flex justify-content-between gap-2"><div><b>${esc(s.org_name)}</b> <code>${esc(s.domain)}</code></div>
+        <span class="badge text-bg-${ST[s.status] || "secondary"}">${esc(s.status)}</span></div>
+      <div class="text-muted">${esc(s.category)} &middot; requested ${fmtDate(s.requested_at)}</div>
+      ${s.admin_note ? `<div class="mt-1"><i class="bi bi-chat-left-text me-1"></i>Admin: ${esc(s.admin_note)}</div>` : ""}
+      ${s.status === "pending" ? `<div class="mt-2">Put this code on your website (any page text, a <code>&lt;meta&gt;</code> tag, or a file at <code>/.well-known/phishguard.txt</code>):</div><div class="token-box">${esc(s.token)}</div>
+        <div class="d-flex align-items-center gap-2 mt-2 flex-wrap"><button class="btn btn-sm btn-outline-primary" data-chk="${esc(s.verified_id)}"><i class="bi bi-search me-1"></i>Check my code</button>
+          <span>${s.token_check ? (s.token_check.found ? `<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Code found. The administrator will see that ownership is proven.</span>` : `<span class="text-warning"><i class="bi bi-exclamation-circle me-1"></i>Code not found (${esc(s.token_check.note)}).</span>`) : `<span class="text-muted">Not checked yet.</span>`}</span></div>` : ""}</div>`;
+  }
+  async function loadMine() {
+    try { const l = await API.sites.mine(); $("mine").innerHTML = l.length ? l.map(mineCard).join("") : "No requests yet."; }
+    catch (e) { $("mine").textContent = e.message; }
+  }
+  async function loadDir() {
+    try {
+      const l = await API.sites.verified();
+      $("dir").innerHTML = l.length ? l.map(s => `<tr><td><code>${esc(s.domain)}</code></td><td>${esc(s.org_name)}</td><td>${esc(s.category)}</td>
+        <td class="small">${esc(s.purpose)}</td><td>${esc(s.owner_name)}</td><td class="small">${fmtDate(s.verified_on)}</td></tr>`).join("")
+        : `<tr><td colspan="6" class="empty">No verified websites yet.</td></tr>`;
+    } catch (e) { $("dir").innerHTML = `<tr><td colspan="6" class="empty text-danger">${esc(e.message)}</td></tr>`; }
+  }
+  $("mine").addEventListener("click", async e => {
+    const b = e.target.closest("[data-chk]"); if (!b) return;
+    b.disabled = true; b.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Checking...';
+    try { await API.sites.checkCode(b.dataset.chk); } catch (err) { UI.toast(err.message, "danger"); }
+    loadMine();
+  });
+  API.sites.categories().then(c => { $("cat").innerHTML = c.map(x => `<option>${esc(x)}</option>`).join(""); });
+
+  $("f").addEventListener("submit", async e => {
+    e.preventDefault();
+    const btn = $("send"); UI.setLoading(btn, true, "Sending...");
+    try {
+      const r = await API.sites.request({ domain: $("domain").value, org_name: $("org").value, category: $("cat").value,
+        purpose: $("purpose").value, contact_email: $("email").value, evidence: $("evidence").value });
+      $("msg").innerHTML = `<div class="alert alert-success py-2 mb-0"><b>Request sent.</b> Your verification code:<div class="token-box mt-1">${esc(r.token)}</div></div>`;
+      $("f").reset(); loadMine();
+    } catch (err) { UI.showError($("msg"), err.message); }
+    UI.setLoading(btn, false);
+  });
+  loadMine(); loadDir();
+</script>
+</body>
+</html>

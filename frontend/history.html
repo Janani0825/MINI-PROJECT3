@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>History - PhishGuard</title>
+  <link rel="stylesheet" href="vendor/bootstrap.min.css">
+  <link rel="stylesheet" href="vendor/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<main class="pb-5">
+  <div class="page-head d-flex flex-wrap justify-content-between align-items-end gap-2">
+    <div><h1>Scan history</h1><p>All websites you have scanned.</p></div>
+    <button id="csvBtn" class="btn btn-outline-primary btn-sm"><i class="bi bi-download me-1"></i>Export CSV</button>
+  </div>
+  <div class="card mb-3"><div class="card-body row g-2">
+    <div class="col-md"><input id="q" class="form-control" placeholder="Search URL or domain..."></div>
+    <div class="col-md-3"><select id="flt" class="form-select"><option value="">All results</option><option>Safe</option><option>Suspicious</option><option>Fake</option></select></div>
+  </div></div>
+  <div class="card"><div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>Scan</th><th>URL</th><th>Date</th><th>Risk</th><th>Result</th><th></th></tr></thead>
+      <tbody id="rows"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+    </table></div></div>
+</main>
+
+<div class="modal fade" id="detail" tabindex="-1"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Scan details</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body bg-light" id="detailBody"></div></div></div></div>
+
+<script src="vendor/bootstrap.bundle.min.js"></script>
+<script src="js/config.js"></script><script src="js/mock.js"></script><script src="js/api.js"></script><script src="js/ui.js"></script><script src="js/result.js"></script>
+<script>
+  UI.guard("user"); UI.navbar("history.html");
+  let all = [];
+  const rows = document.getElementById("rows"), modal = new bootstrap.Modal(document.getElementById("detail"));
+
+  function draw() {
+    const q = document.getElementById("q").value.toLowerCase(), f = document.getElementById("flt").value;
+    const list = all.filter(s => (!f || (s.result && s.result.classification === f)) &&
+      (!q || s.submitted_url.toLowerCase().includes(q) || s.domain.toLowerCase().includes(q)));
+    if (!list.length) { rows.innerHTML = `<tr><td colspan="6"><div class="empty"><i class="bi bi-inbox"></i>No scans found. <a href="scan.html">Scan a URL</a></div></td></tr>`; return; }
+    rows.innerHTML = list.map(s => `<tr>
+      <td>${UI.esc(s.scan_id)}</td>
+      <td><div class="url-cell" title="${UI.esc(s.submitted_url)}">${UI.esc(s.submitted_url)}</div></td>
+      <td class="small">${UI.fmtDate(s.scan_date)}</td>
+      <td><b>${s.result ? s.result.risk_score : "-"}%</b></td>
+      <td>${s.result ? UI.badge(s.result.classification) : "-"}</td>
+      <td class="text-end text-nowrap">
+        <button class="btn btn-sm btn-outline-primary" data-view="${s.scan_id}"><i class="bi bi-eye"></i></button>
+        <button class="btn btn-sm btn-outline-danger" data-del="${s.scan_id}"><i class="bi bi-trash"></i></button></td></tr>`).join("");
+  }
+  rows.addEventListener("click", async e => {
+    const v = e.target.closest("[data-view]"), d = e.target.closest("[data-del]");
+    if (v) { document.getElementById("detailBody").innerHTML = renderReport(all.find(s => s.scan_id === v.dataset.view)); modal.show(); }
+    if (d && confirm("Delete this scan record?")) {
+      try { await API.deleteScan(d.dataset.del); all = all.filter(s => s.scan_id !== d.dataset.del); draw(); UI.toast("Scan deleted", "success"); }
+      catch (err) { UI.toast(err.message, "danger"); }
+    }
+  });
+  document.getElementById("q").oninput = draw; document.getElementById("flt").onchange = draw;
+  document.getElementById("csvBtn").onclick = () => UI.downloadCSV("my-scan-history.csv", all.map(s => ({
+    scan_id: s.scan_id, url: s.submitted_url, domain: s.domain, date: s.scan_date,
+    risk_score: s.result && s.result.risk_score, classification: s.result && s.result.classification })));
+
+  API.scans().then(d => { all = d; draw(); }).catch(err => {
+    if (err.status === 401) { API.logout(); location.href = "index.html"; return; }
+    rows.innerHTML = `<tr><td colspan="6" class="empty text-danger">${UI.esc(err.message)}</td></tr>`; });
+</script>
+</body>
+</html>

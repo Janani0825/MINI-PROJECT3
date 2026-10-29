@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profile - PhishGuard</title>
+  <link rel="stylesheet" href="vendor/bootstrap.min.css">
+  <link rel="stylesheet" href="vendor/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<main class="pb-5" style="max-width:640px">
+  <div class="page-head"><h1>My profile</h1><p>Manage your account details.</p></div>
+  <div class="card"><div class="card-body p-4">
+    <div id="msg" class="mb-3"></div>
+    <form id="form" novalidate>
+      <div class="mb-3"><label class="form-label">Full name</label><input id="name" class="form-control"></div>
+      <div class="mb-3"><label class="form-label">Email</label><input id="email" class="form-control" disabled></div>
+      <div class="row mb-3 small text-muted"><div class="col">Member since: <span id="created"></span></div><div class="col">Last login: <span id="last"></span></div></div>
+      <hr>
+      <div class="mb-3"><label class="form-label">New password <span class="text-muted">(leave blank to keep current)</span></label><input type="password" id="pw" class="form-control"></div>
+      <div class="mb-3"><label class="form-label">Confirm new password</label><input type="password" id="pw2" class="form-control"></div>
+      <button class="btn btn-primary" id="saveBtn">Save changes</button>
+    </form>
+  </div></div>
+</main>
+<script src="vendor/bootstrap.bundle.min.js"></script>
+<script src="js/config.js"></script><script src="js/mock.js"></script><script src="js/api.js"></script><script src="js/ui.js"></script>
+<script>
+  const u = UI.guard("user"); UI.navbar("profile.html");
+  const $ = id => document.getElementById(id);
+  $("name").value = u.name; $("email").value = u.email; $("created").textContent = UI.fmtDate(u.created_at); $("last").textContent = UI.fmtDate(u.last_login);
+  $("form").addEventListener("submit", async e => {
+    e.preventDefault(); const msg = $("msg"); msg.innerHTML = "";
+    const name = $("name").value.trim(), pw = $("pw").value;
+    if (!name) return UI.showError(msg, "Name cannot be empty.");
+    if (pw && pw.length < 8) return UI.showError(msg, "Password must be at least 8 characters.");
+    if (pw !== $("pw2").value) return UI.showError(msg, "Passwords do not match.");
+    UI.setLoading($("saveBtn"), true, "Saving...");
+    try { await API.updateProfile(pw ? { name, password: pw } : { name }); UI.navbar("profile.html"); $("pw").value = $("pw2").value = ""; UI.toast("Profile updated", "success"); }
+    catch (err) { UI.showError(msg, err.message); }
+    UI.setLoading($("saveBtn"), false);
+  });
+</script>
+</body>
+</html>

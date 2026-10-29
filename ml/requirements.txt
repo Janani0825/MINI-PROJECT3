@@ -1,0 +1,3 @@
+# needed to RUN the portal (detection only)
+tldextract>=5.1
+rapidfuzz>=3.0

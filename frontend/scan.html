@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scan URL - PhishGuard</title>
+  <link rel="stylesheet" href="vendor/bootstrap.min.css">
+  <link rel="stylesheet" href="vendor/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<main class="pb-5">
+  <div class="hero"><span class="eyebrow"><i class="bi bi-shield-check me-1"></i>Website safety check</span>
+    <h1>Is this website <em>safe</em>?</h1>
+    <p>Paste any link. Six detection layers analyse it and explain exactly which one decided and why.</p></div>
+  <div class="card scan-card">
+    <form id="scanForm" novalidate>
+      <div class="input-wrap"><i class="bi bi-link-45deg"></i>
+        <input id="url" class="form-control scan-input" placeholder="Paste a link, for example https://example.com/login" autocomplete="off" required>
+        <button id="scanBtn" class="btn btn-primary btn-lg px-4"><i class="bi bi-radar me-1"></i>Analyse</button></div>
+      <div class="deep-row">
+        <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" role="switch" id="deep">
+          <label class="form-check-label" for="deep"><b>Deep scan</b></label></div>
+        <span class="text-muted small">Also inspects the page itself: password forms, copied content, domain age and website security headers.</span>
+      </div>
+    </form>
+    <div id="msg" class="mt-3"></div>
+  </div>
+  <div id="result"></div>
+  <div id="intro">
+    <div class="row g-3 mb-4" id="tiles"></div>
+    <div class="row g-3">
+      <div class="col-lg-7"><div class="card h-100"><div class="card-body">
+        <div class="card-title-sm mb-3">How a link is judged</div>
+        <div class="how">
+          <div><i class="bi bi-award"></i><b>Verified owner</b><small>Sites approved by the administrator</small></div>
+          <div><i class="bi bi-slash-circle"></i><b>Blacklist</b><small>Known and auto-blocked domains</small></div>
+          <div><i class="bi bi-patch-check"></i><b>Trusted list</b><small>Top 100,000 popular domains</small></div>
+          <div><i class="bi bi-fonts"></i><b>Look-alike</b><small>Typos and fake spellings of popular names</small></div>
+          <div><i class="bi bi-cpu"></i><b>ML model</b><small>37 URL features, explained per scan</small></div>
+          <div><i class="bi bi-globe2"></i><b>Deep scan</b><small>Page content and security headers</small></div>
+        </div></div></div></div>
+      <div class="col-lg-5"><div class="card h-100"><div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2"><div class="card-title-sm">Recent scans</div><a class="small" href="history.html">View all</a></div>
+        <div id="recent" class="small text-muted">Loading...</div></div></div></div>
+    </div>
+  </div>
+</main>
+<script src="vendor/bootstrap.bundle.min.js"></script>
+<script src="js/config.js"></script><script src="js/mock.js"></script><script src="js/api.js"></script><script src="js/ui.js"></script><script src="js/result.js"></script>
+<script>
+  UI.guard("user"); UI.navbar("scan.html");
+  const input = document.getElementById("url"), msg = document.getElementById("msg"), out = document.getElementById("result");
+  const intro = document.getElementById("intro");
+  API.scans().then(list => {
+    const n = list.length, c = k => list.filter(s => s.result && s.result.classification === k).length;
+    const tile = (ic, cls, v, l) => `<div class="col-6 col-lg-3"><div class="card stat"><div class="ico ${cls}"><i class="bi ${ic}"></i></div><div><div class="num">${v}</div><div class="lbl">${l}</div></div></div></div>`;
+    document.getElementById("tiles").innerHTML = tile("bi-search", "ico-blue", n, "Links checked") + tile("bi-shield-check", "ico-green", c("Safe"), "Safe") +
+      tile("bi-exclamation-triangle", "ico-amber", c("Suspicious"), "Suspicious") + tile("bi-shield-x", "ico-red", c("Fake"), "Fake");
+    document.getElementById("recent").innerHTML = n ? list.slice(0, 5).map(s => `<a class="recent" href="history.html"><span class="text-truncate">${UI.esc(s.submitted_url)}</span>${UI.badge(s.result && s.result.classification)}</a>`).join("")
+      : "Nothing scanned yet. Your checks will appear here.";
+  }).catch(() => { document.getElementById("recent").textContent = ""; });
+
+  document.getElementById("scanForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const url = input.value.trim(), btn = document.getElementById("scanBtn");
+    msg.innerHTML = ""; out.innerHTML = ""; intro.style.display = "none";
+    if (!url) return UI.showError(msg, "Please enter a URL.");
+    if (url.length > 2000) return UI.showError(msg, "URL is too long.");
+    UI.setLoading(btn, true, "Analysing...");
+    const deep = document.getElementById("deep").checked;
+    out.innerHTML = `<div class="card mb-3"><div class="card-body"><div class="card-title-sm mb-2">Scanning...</div>${scanningPipeline(deep)}</div></div>`;
+    const steps = out.querySelectorAll(".step"); let i = 0;
+    const tick = setInterval(() => { steps.forEach((x, k) => { x.classList.toggle("run", k === i % (deep ? 6 : 5)); }); i++; }, 260);
+    try {
+      // the animation is shown for at least ~1.2 s so people can follow what is being checked
+      const [scan] = await Promise.all([API.scan(url, deep), new Promise(r => setTimeout(r, 1200))]);
+      clearInterval(tick);
+      out.innerHTML = renderReport(scan);
+      out.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      clearInterval(tick); out.innerHTML = "";
+      if (err.status === 401) { API.logout(); location.href = "index.html"; return; }
+      UI.showError(msg, err.message);
+    }
+    UI.setLoading(btn, false);
+  });
+</script>
+</body>
+</html>

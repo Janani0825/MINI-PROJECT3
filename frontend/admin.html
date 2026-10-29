@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Dashboard - PhishGuard</title>
+  <link rel="stylesheet" href="vendor/bootstrap.min.css">
+  <link rel="stylesheet" href="vendor/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<main class="pb-5">
+  <div class="page-head"><h1>Admin dashboard</h1><p>Monitor users, scans and phishing trends.</p></div>
+
+  <div class="row g-3 mb-4" id="stats"></div>
+
+  <ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#t-trends">Trends</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-threat">Threat monitor <span id="incBadge" class="badge text-bg-danger d-none"></span></button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-sites">Site verification <span id="siteBadge" class="badge text-bg-warning d-none"></span></button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-scans">Scan history</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-users">Users</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-black">Blacklist</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-rep">Reports</button></li>
+  </ul>
+
+  <div class="tab-content">
+    <!-- trends -->
+    <div class="tab-pane fade show active" id="t-trends"><div class="row g-3">
+      <div class="col-lg-8"><div class="card h-100"><div class="card-body">
+        <div class="d-flex justify-content-between"><div class="card-title-sm">Scans in the last 7 days</div>
+          <div class="small"><span class="legend-dot" style="background:var(--safe)"></span>Safe <span class="legend-dot ms-2" style="background:#f0a020"></span>Suspicious <span class="legend-dot ms-2" style="background:var(--fake)"></span>Fake</div></div>
+        <div class="trend" id="trend"></div></div></div></div>
+      <div class="col-lg-4"><div class="card h-100"><div class="card-body">
+        <div class="card-title-sm mb-2">Most detected fake domains</div><ol class="mb-0 ps-3" id="topFake"></ol></div></div></div>
+      <div class="col-12"><div class="card"><div class="card-body">
+        <div class="card-title-sm mb-2">Which detection layer decided the verdict</div><div id="layerBars"></div></div></div></div>
+    </div></div>
+
+    <!-- threat monitor -->
+    <div class="tab-pane fade" id="t-threat">
+      <p class="text-muted small mb-3">The portal watches behaviour over time: repeated attempts on one fake site, the same fake site hitting several users,
+        several look-alike domains of one brand (a campaign), and users who scan many fake sites quickly. Auto-blocked domains appear in the Blacklist tab.</p>
+      <div class="card"><div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+        <thead><tr><th>ID</th><th>Type</th><th>What happened</th><th>Action taken</th><th>Updated</th><th>Status</th><th></th></tr></thead><tbody id="incRows"></tbody></table></div></div>
+    </div>
+
+    <!-- site verification -->
+    <div class="tab-pane fade" id="t-sites">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <p class="text-muted small mb-0">Owners ask to have their website verified. Check the category, evidence and the automatic flags, then approve a genuine owner or reject a suspected hacker.</p>
+        <select id="siteFlt" class="form-select form-select-sm w-auto"><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="revoked">Revoked</option><option value="">All</option></select>
+      </div>
+      <div class="card"><div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+        <thead><tr><th>ID</th><th>Website</th><th>Requested by</th><th>Category</th><th>Automatic checks</th><th>Status</th><th></th></tr></thead><tbody id="siteRows"></tbody></table></div></div>
+    </div>
+
+    <!-- scans -->
+    <div class="tab-pane fade" id="t-scans">
+      <div class="row g-2 mb-3"><div class="col-md"><input id="sq" class="form-control" placeholder="Search URL, domain or user..."></div>
+        <div class="col-md-3"><select id="sf" class="form-select"><option value="">All results</option><option>Safe</option><option>Suspicious</option><option>Fake</option></select></div></div>
+      <div class="card"><div class="table-responsive"><table class="table table-hover mb-0">
+        <thead><tr><th>Scan</th><th>User</th><th>URL</th><th>Date</th><th>Risk</th><th>Result</th></tr></thead><tbody id="scanRows"></tbody></table></div></div>
+    </div>
+
+    <!-- users -->
+    <div class="tab-pane fade" id="t-users"><div class="card"><div class="table-responsive"><table class="table table-hover mb-0">
+      <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Scans</th><th>Joined</th><th>Last login</th></tr></thead><tbody id="userRows"></tbody></table></div></div></div>
+
+    <!-- blacklist -->
+    <div class="tab-pane fade" id="t-black">
+      <form id="blForm" class="row g-2 mb-3">
+        <div class="col-md"><input id="blDomain" class="form-control" placeholder="malicious-domain.com"></div>
+        <div class="col-md-3"><input id="blSource" class="form-control" placeholder="Source (e.g. PhishTank)"></div>
+        <div class="col-md-auto"><button class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add</button></div></form>
+      <div class="card"><div class="table-responsive"><table class="table table-hover mb-0">
+        <thead><tr><th>ID</th><th>Domain</th><th>Source</th><th>Added</th><th></th></tr></thead><tbody id="blRows"></tbody></table></div></div>
+    </div>
+
+    <!-- reports -->
+    <div class="tab-pane fade" id="t-rep">
+      <div class="card mb-3"><div class="card-body row g-2 align-items-end">
+        <div class="col-md"><label class="form-label small">Report type</label>
+          <select id="repType" class="form-select"><option>Scan Summary</option><option>Fake Websites</option><option>User Activity</option></select></div>
+        <div class="col-md"><label class="form-label small">Period</label>
+          <select id="repRange" class="form-select"><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="0">All time</option></select></div>
+        <div class="col-md-auto"><button id="repBtn" class="btn btn-primary"><i class="bi bi-file-earmark-arrow-down me-1"></i>Generate &amp; download CSV</button></div>
+      </div></div>
+      <div class="card"><div class="table-responsive"><table class="table mb-0">
+        <thead><tr><th>Report</th><th>Type</th><th>Period</th><th>Generated</th><th>File</th></tr></thead><tbody id="repRows"></tbody></table></div></div>
+    </div>
+  </div>
+</main>
+
+<div class="modal fade" id="siteModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Review website request</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body" id="siteBody"></div></div></div></div>
+<script src="vendor/bootstrap.bundle.min.js"></script>
+<script src="js/config.js"></script><script src="js/mock.js"></script><script src="js/api.js"></script><script src="js/ui.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

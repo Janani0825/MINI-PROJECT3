@@ -1,0 +1,100 @@
+{
+ "sets": {
+  "phishing (feed URLs)": {
+   "ml": {
+    "Safe": 19,
+    "Suspicious": 25,
+    "Fake": 1456
+   },
+   "raw": {
+    "Safe": 148,
+    "Suspicious": 25,
+    "Fake": 1327
+   },
+   "hybrid": {
+    "Safe": 148,
+    "Suspicious": 708,
+    "Fake": 644
+   },
+   "n": 1500
+  },
+  "phishing (home page only)": {
+   "ml": {
+    "Safe": 0,
+    "Suspicious": 19,
+    "Fake": 1481
+   },
+   "raw": {
+    "Safe": 159,
+    "Suspicious": 17,
+    "Fake": 1324
+   },
+   "hybrid": {
+    "Safe": 159,
+    "Suspicious": 1050,
+    "Fake": 291
+   },
+   "n": 1500
+  },
+  "legit unknown (home page)": {
+   "ml": {
+    "Safe": 1,
+    "Suspicious": 83,
+    "Fake": 1416
+   },
+   "raw": {
+    "Safe": 49,
+    "Suspicious": 76,
+    "Fake": 1375
+   },
+   "hybrid": {
+    "Safe": 60,
+    "Suspicious": 1385,
+    "Fake": 55
+   },
+   "n": 1500
+  },
+  "legit unknown (with path)": {
+   "ml": {
+    "Safe": 1480,
+    "Suspicious": 14,
+    "Fake": 6
+   },
+   "raw": {
+    "Safe": 1439,
+    "Suspicious": 56,
+    "Fake": 5
+   },
+   "hybrid": {
+    "Safe": 1439,
+    "Suspicious": 57,
+    "Fake": 4
+   },
+   "n": 1500
+  },
+  "typosquat of top brands": {
+   "ml": {
+    "Safe": 0,
+    "Suspicious": 34,
+    "Fake": 1466
+   },
+   "raw": {
+    "Safe": 0,
+    "Suspicious": 17,
+    "Fake": 1483
+   },
+   "hybrid": {
+    "Safe": 2,
+    "Suspicious": 131,
+    "Fake": 1367
+   },
+   "n": 1500
+  }
+ },
+ "lookalike": {
+  "typosquat_hit_rate": 87.1,
+  "false_strong_alarm_rate": 2.0,
+  "n_typo": 1500,
+  "n_neg": 1500
+ }
+}

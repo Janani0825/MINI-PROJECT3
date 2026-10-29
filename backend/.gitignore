@@ -1,0 +1,3 @@
+.secret_key
+generated_reports/
+__pycache__/
