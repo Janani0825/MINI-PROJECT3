@@ -20,6 +20,7 @@ import pagecheck
 import report_pdf
 import sites
 import threat
+import google_safe_browsing
 from auth import error, login_required, rate_limited
 
 sys.path.insert(0, config.ML_DIR)
@@ -162,6 +163,27 @@ def update_profile():
     return jsonify(public_user(db.get_db().users.find_one({"user_id": g.user["user_id"]})))
 
 
+def apply_google_safe_browsing(out, url):
+    """Add Google's URL reputation result without making its outage break normal scans."""
+    r = out["result"]
+    check = google_safe_browsing.check_url(url)
+    r["google_safe_browsing"] = check
+    status = check["status"]
+    layer = {
+        "layer": "Google Safe Browsing",
+        "status": "hit" if status == "hit" else "pass" if status == "clear" else "skip",
+        "note": check["note"]
+    }
+    r["pipeline"] = [x for x in r.get("pipeline", []) if x.get("layer") != "Google Safe Browsing"] + [layer]
+    if status == "hit":
+        r["risk_score"] = 100
+        r["classification"] = "Fake"
+        r["reasons"] = r.get("reasons", []) + [check["note"]]
+        r["detection_reason"] = " ".join(r["reasons"])
+        r["recommendation"] = "Do not visit this website or enter information. Google Safe Browsing reported it as unsafe."
+        r["decided_by"] = (r.get("decided_by") or "ml") + "+google-safe-browsing"
+
+
 def apply_verified(d, out):
     """If the admin has verified this website's owner, say so and mark it Safe (a blacklist entry still wins)."""
     r = out["result"]
@@ -208,6 +230,7 @@ def scan():
         out = pagecheck.augment(out, url, __import__("features")._EXTRACT)
 
     apply_verified(d, out)                     # verified owner registry (admin-approved websites)
+    apply_google_safe_browsing(out, url)       # optional Google threat-intelligence check
 
     duplicate = d.scans.count_documents({"user_id": g.user["user_id"], "submitted_url": url}) > 0
     scan_doc = {"scan_id": db.next_id("S", "scans"), "user_id": g.user["user_id"], "submitted_url": url,

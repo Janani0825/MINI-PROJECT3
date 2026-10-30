@@ -1,6 +1,6 @@
 /* Renders a scan (with its detection result) as an "evidence report". Used by the scan page and the history page. */
 (function () {
-  const ICONS = { "Verified owner": "bi-award", "Blacklist": "bi-slash-circle", "Trusted list": "bi-patch-check", "Look-alike": "bi-fonts", "ML model": "bi-cpu", "Deep scan": "bi-globe2" };
+  const ICONS = { "Verified owner": "bi-award", "Blacklist": "bi-slash-circle", "Trusted list": "bi-patch-check", "Look-alike": "bi-fonts", "ML model": "bi-cpu", "Deep scan": "bi-globe2", "Google Safe Browsing": "bi-google" };
   const STATUS_ICON = { safehit: "bi-patch-check-fill", pass: "bi-check-circle-fill", hit: "bi-exclamation-octagon-fill", skip: "bi-dash-circle", run: "bi-arrow-repeat" };
 
   /* The detection layers as a row of steps. `layers` = [{layer,status,note}] */
@@ -78,6 +78,9 @@
         <div class="feature"><small>Files loaded from the real brand</small><b class="${pg.hotlinked_from_brand ? "bad" : "good"}">${pg.hotlinked_from_brand || 0}</b></div>
         <div class="feature"><small>Similar to the real site</small><b>${pg.similarity_to_real != null ? Math.round(pg.similarity_to_real * 100) + "%" : "-"}</b></div>
         <div class="feature"><small>Domain age</small><b>${pg.domain_age_days != null ? pg.domain_age_days + " days" : "unknown"}</b></div>
+        <div class="feature"><small>External-domain links</small><b>${pg.external_link_count || 0}</b></div>
+        <div class="feature"><small>Hidden iframes</small><b class="${pg.hidden_iframe_count ? "bad" : "good"}">${pg.hidden_iframe_count || 0}</b></div>
+        <div class="feature"><small>Phishing-style text patterns</small><b class="${pg.phishing_keyword_count >= 3 ? "bad" : "good"}">${pg.phishing_keyword_count || 0}</b></div>
       </div></div></div></div>`;
   }
 
