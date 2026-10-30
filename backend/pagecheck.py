@@ -139,7 +139,8 @@ class _Page(HTMLParser):
         self.title, self._in_title, self._skip = "", False, 0
         self.text, self.tags = [], []
         self.password = 0
-        self.form_actions, self.resources = [], []
+        self.form_actions, self.resources, self.links = [], [], []
+        self.hidden_iframes = 0
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
@@ -148,6 +149,12 @@ class _Page(HTMLParser):
         if tag in ("script", "style", "noscript"): self._skip += 1
         if tag == "input" and (a.get("type") or "").lower() == "password": self.password += 1
         if tag == "form": self.form_actions.append(a.get("action") or "")
+        if tag == "a" and a.get("href"): self.links.append(a["href"])
+        if tag == "iframe":
+            style = (a.get("style") or "").replace(" ", "").lower()
+            if (a.get("aria-hidden") == "true" or "display:none" in style or
+                    "visibility:hidden" in style or "width:0" in style or "height:0" in style):
+                self.hidden_iframes += 1
         for k in ("src", "href"):
             if a.get(k) and tag in ("img", "script", "link", "iframe", "source", "video"):
                 self.resources.append(a[k])
@@ -195,7 +202,23 @@ def analyse_html(html, page_url, real_domain, ext, real_fp=None):
     p = parse_page(html)
     here = _reg(urlparse(page_url).hostname, ext)
     f = {"title": re.sub(r"\s+", " ", p.title).strip()[:120], "has_password_form": p.password > 0,
-         "form_to_other_domain": False, "hotlinked_from_brand": 0, "similarity_to_real": None, "points": 0, "reasons": []}
+         "form_to_other_domain": False, "hotlinked_from_brand": 0, "similarity_to_real": None,
+         "external_link_count": 0, "hidden_iframe_count": p.hidden_iframes,
+         "phishing_keyword_count": 0, "phishing_keywords": [], "points": 0, "reasons": []}
+    keyword_patterns = (
+        "verify your account", "account suspended", "confirm your identity",
+        "update payment", "payment failed", "login immediately", "secure your account",
+        "unusual activity", "password expires", "claim your reward", "limited time offer",
+        "click here to verify", "bank details", "one time password", "otp"
+    )
+    visible_text = " ".join(p.text).lower()
+    f["phishing_keywords"] = [word for word in keyword_patterns if word in visible_text]
+    f["phishing_keyword_count"] = len(f["phishing_keywords"])
+    page_host = urlparse(page_url).hostname or ""
+    for href in p.links:
+        target = urlparse(urljoin(page_url, href))
+        if target.scheme in ("http", "https") and target.hostname and _reg(target.hostname, ext) != _reg(page_host, ext):
+            f["external_link_count"] += 1
     for act in p.form_actions:
         if act.startswith(("http://", "https://", "//")):
             tgt = _reg(urlparse(urljoin(page_url, act)).hostname, ext)
@@ -208,6 +231,12 @@ def analyse_html(html, page_url, real_domain, ext, real_fp=None):
     if f["has_password_form"]:
         f["points"] += 10
         f["reasons"].append("The page asks for a password.")
+    if f["phishing_keyword_count"] >= 3:
+        f["points"] += 15
+        f["reasons"].append("The visible page text contains multiple phishing-style urgency or credential prompts.")
+    if f["hidden_iframe_count"]:
+        f["points"] += min(20, 10 * f["hidden_iframe_count"])
+        f["reasons"].append("The page contains %d hidden iframe(s), which can conceal embedded content." % f["hidden_iframe_count"])
     if f["form_to_other_domain"]:
         f["points"] += 25
         f["reasons"].append("The form sends the entered data to a different website than the one you are on.")
@@ -258,10 +287,8 @@ def augment(out, url, ext):
         final_url, html, hdrs = fetch_full(out_url(url))
         page["checked"] = True
         r["security"] = security_headers(hdrs, final_url)
-        if certain:
-            page["note"] = "Content analysis skipped: this domain is already trusted."
-            r["page"] = page
-            return out
+        # Trusted domains still receive passive content inspection during an explicit deep scan.
+        # A trusted-list match does not guarantee the live page is harmless.
         real_fp = None
         if real:
             try:
