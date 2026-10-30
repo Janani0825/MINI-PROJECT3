@@ -1,6 +1,6 @@
 /* Renders a scan (with its detection result) as an "evidence report". Used by the scan page and the history page. */
 (function () {
-  const ICONS = { "Verified owner": "bi-award", "Blacklist": "bi-slash-circle", "Trusted list": "bi-patch-check", "Look-alike": "bi-fonts", "ML model": "bi-cpu", "Deep scan": "bi-globe2" };
+  const ICONS = { "Verified owner": "bi-award", "Blacklist": "bi-slash-circle", "Trusted list": "bi-patch-check", "Look-alike": "bi-fonts", "ML model": "bi-cpu", "Deep scan": "bi-globe2", "Google Safe Browsing": "bi-google" };
   const STATUS_ICON = { safehit: "bi-patch-check-fill", pass: "bi-check-circle-fill", hit: "bi-exclamation-octagon-fill", skip: "bi-dash-circle", run: "bi-arrow-repeat" };
 
   /* The detection layers as a row of steps. `layers` = [{layer,status,note}] */
