@@ -78,6 +78,9 @@
         <div class="feature"><small>Files loaded from the real brand</small><b class="${pg.hotlinked_from_brand ? "bad" : "good"}">${pg.hotlinked_from_brand || 0}</b></div>
         <div class="feature"><small>Similar to the real site</small><b>${pg.similarity_to_real != null ? Math.round(pg.similarity_to_real * 100) + "%" : "-"}</b></div>
         <div class="feature"><small>Domain age</small><b>${pg.domain_age_days != null ? pg.domain_age_days + " days" : "unknown"}</b></div>
+        <div class="feature"><small>External-domain links</small><b>${pg.external_link_count || 0}</b></div>
+        <div class="feature"><small>Hidden iframes</small><b class="${pg.hidden_iframe_count ? "bad" : "good"}">${pg.hidden_iframe_count || 0}</b></div>
+        <div class="feature"><small>Phishing-style text patterns</small><b class="${pg.phishing_keyword_count >= 3 ? "bad" : "good"}">${pg.phishing_keyword_count || 0}</b></div>
       </div></div></div></div>`;
   }
 
